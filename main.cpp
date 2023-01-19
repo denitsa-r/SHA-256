@@ -7,7 +7,8 @@
 using namespace std;
 
 //CONSTANTS
-const char* const HASH_FILE = "C:\\Users\\user\\CLionProjects\\sha-256\\hash.txt";
+const char* const MAIN_FILE = "../files/main.txt";
+const char* const HASH_FILE = "../files/hash.txt";
 const int COL_MAX = 256;
 const int ROW_MAX = 32;
 const int ELEMENT_BITS = 8;
@@ -53,7 +54,7 @@ bool** make_2d_binary ( const int rows, const int cols) {
 char** make_2d_chars ( const int rows, const int cols) {
     char** content = new char*[rows];
     for ( int current_row = 0; current_row < rows; current_row++ ) {
-        content[current_row] = new char[cols];
+        content[current_row] = new char[cols]();
     }
     return content;
 }
@@ -75,8 +76,10 @@ void delete_2d_char_array ( char** array, const int &rows ) {
 //SHA-256 FUNCTIONS
 void print_hash ( char* final_result ) {
 
-    for ( int col = 0; col < COL_MAX; col++ ){
-        cout << final_result[col];
+    if (final_result[0] != NULL ) {
+        for ( int col = 0; col < COL_MAX; col++ ){
+            cout << final_result[col];
+        }
     }
 
 }
@@ -706,72 +709,219 @@ void sha_algorithm ( const char* message, bool** binary, char* final_result, con
 }
 
 /* FILE FUNCTIONS */
-//void read_line( char** content, fstream& file ) {
-//    while( ! file.eof() ){
-//        char** line = new char*[MESSAGE_MAX];
-//        for( int rows = 0; rows < MESSAGE_MAX; rows++ ){
-//            line[rows] = new char[COL_MAX];
-//            content[rows] = new char [COL_MAX];
-//        }
-//        for( int row = 0; row < MESSAGE_MAX; row++ ){
-//            for( int col = 0; col < COL_MAX; col++ ){
-//                file.get(line[row][col]);
-//                if( line[row][col] == BREAK_CHAR ){
-//                    break;
-//                }
-//                content[row][col] = line[row][col];
-//            }
-//
-//        }
-//        delete [] line;
-//    }
-//}
+bool test_open () {
+    fstream file;
+    file.open(MAIN_FILE, ios::in);
+    //checking if the file is open
+    if( ! file.is_open() ){
+        return false;
+    }
 
-//bool read_file ( char** content ) {
-//    fstream file(HASH_FILE, ios::in);
-//    //checking if the file is open
-//    if( ! file.is_open() ){
-//        return false;
-//    }
-//
-//    read_line(content, file);
-//
-//    file.close();
-//    return true;
-//}
+    file.close();
+    return true;
+}
+
+void read_file_content ( char** content, const char filename[] ) {
+    fstream file;
+    file.open(filename, ios::in);
+
+    char** line = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+    int row = 0;
+
+    while ( true ) {
+        for( int col = 0; col < MESSAGE_MAX; col++ ){
+            file.get(line[row][col]);
+            if( line[row][col] == ';' ) {
+                break;
+            }
+            content[row][col] = line[row][col];
+            cout << content[row][col];
+            if ( file.eof() ) {
+                break;
+            }
+        }
+        if ( file.eof() ) {
+            break;
+        }
+        row++;
+    }
+
+    delete [] line;
+    delete_2d_char_array(line, MESSAGE_MAX);
+
+}
+
+void open_error () {
+    //starting off I need to open my file and be able to read it
+    bool success = test_open();
+    if( ! success ){
+        cerr << "Couldn't open file!" << endl;
+        exit(0);
+    }
+}
+
+void append_message ( char* message, const char filename[] ) {
+    fstream file;
+    file.open(filename, ios::app);
+
+    file << message << BREAK_CHAR;
+    file << "\n";
+
+    open_error();
+    file.close();
+}
+
+void add_message_trunc ( char* message, const char filename[] ) {
+    fstream file;
+    file.open(filename, ios::out | ios::trunc );
+
+    file << message << BREAK_CHAR;
+    file << "\n";
+
+    open_error();
+    file.close();
+}
+
+void print_menu ( ) {
+    cout << "Menu of actions: " << endl << endl;
+    cout << "1. Read file contents" << endl;
+    cout << "2. Read file line" << endl;
+    cout << "3. Hash message" << endl;
+    cout << "4. Hash message and search it in file" << endl << endl;
+}
+
+void file_options () {
+    cout << "Choose file: " << endl;
+    cout << "1. Main.txt" << endl;
+    cout << "2. Hash.txt" << endl << endl;
+}
+
+void keep_file ( char &ans) {
+    cout << "Do you want to keep the old file content?" << endl;
+    cout << "Y/N" << endl;
+    cin >> ans;
+}
+
+void action() {
+    int input;
+
+    cin >> input;
+    cin.ignore();
+
+    if ( input == 1 ){
+        file_options();
+        int file;
+        cin >> file;
+        char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+
+        switch (file) {
+            case 1:
+                read_file_content(content, MAIN_FILE);
+                break;
+            case 2:
+                read_file_content(content, HASH_FILE);
+                break;
+            default:
+                cerr << "Incorrect input" << endl;
+                break;
+        }
+
+        delete_2d_char_array(content, MESSAGE_MAX);
+    } else if ( input == 2 ) {
+        file_options();
+        int file;
+        cin >> file;
+        char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+        switch (file) {
+            case 1:
+                read_file_content(content, MAIN_FILE);
+                break;
+            case 2:
+                read_file_content(content, HASH_FILE);
+                break;
+            default:
+                cerr << "Incorrect input" << endl;
+                break;
+        }
+        delete_2d_char_array(content, MESSAGE_MAX);
+    } else if( input == 3 ) {
+        //array for user's message and setting default value of all zeros
+        char *message = new char[MESSAGE_MAX];
+        //making an array for the bits of the user's message
+        bool **binary = make_2d_binary(MESSAGE_MAX, COL_MAX);
+
+        cout << "Please enter your message: " << endl;
+        cin.getline(message, MESSAGE_MAX);
+        cout << message << endl;
+
+        char *final_result = new char[COL_MAX];
+        int message_length = get_message_length(message);
+        sha_algorithm(message, binary, final_result, message_length);
+        print_hash(final_result);
+
+        cout << "Do you want to save the hash into a file?" << endl;
+        cout << "Y/N" << endl;
+        char answer;
+        cin >> answer;
+
+        if ( answer == 'Y' ) {
+            file_options();
+            int file;
+            cin >> file;
+            switch (file) {
+                case 1: {
+                    char ans;
+                    keep_file(ans);
+                    if (ans == 'Y') {
+                        append_message(final_result, MAIN_FILE);
+                    } else if (ans == 'N') {
+                        add_message_trunc(final_result, MAIN_FILE);
+                    } else {
+                        cerr << "Incorrect input" << endl;
+                        keep_file(ans);
+                    }
+                } break;
+                case 2: {
+                    char ans;
+                    keep_file(ans);
+                    if (ans == 'Y' || ans == 'y') {
+                        add_message_trunc(final_result, MAIN_FILE);
+                    } else if (ans == 'N' || ans == 'n' ) {
+                        add_message_trunc(final_result, MAIN_FILE);
+                    } else {
+                        cerr << "Incorrect input" << endl;
+                        keep_file(ans);
+                    }
+                } break;
+                default:
+                    cerr << "Incorrect input" << endl;
+                    break;
+            }
+
+        }
+
+        delete[] message;
+        delete[] final_result;
+        delete_2d_bool_array(binary, MESSAGE_MAX);
+    } else if ( input == 4 ) {
+        //
+    } else {
+        cerr << "Incorrect input" << endl;
+        print_menu();
+        action();
+    }
+
+}
 
 int main() {
     _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-    //making an array, which will store the current file content
-//    char** content = new char*[MESSAGE_MAX];
-    //array for user's message and setting default value of all zeros
-    char* message = new char[MESSAGE_MAX];
-    //making an array for the bits of the user's message
-    bool** binary = make_2d_binary(MESSAGE_MAX, COL_MAX);
-    char* final_result = new char[COL_MAX];
-    //starting off I need to open my file and be able to read it
-//    bool success = read_file( content );
 
-//    if( ! success ){
-//        cerr << "Couldn't open file!" << endl;
-//    }
+    cout << "Welcome to the SHA-256 application!" << endl;
+    
+    print_menu();
 
-    //I need to hash a message from the user
-    cout << "Please enter your message: " << endl;
-    cin.getline(message, MESSAGE_MAX);
-    cout << message << endl;
-
-    int message_length = get_message_length(message);
-
-    sha_algorithm(message, binary, final_result, message_length);
-    print_hash(final_result);
-
-    //deleting arrays
-    delete [] message;
-    delete [] final_result;
-    delete_2d_bool_array(binary, MESSAGE_MAX);
-//    delete_2d_char_array(content, MESSAGE_MAX);
+    action();
 
     return 0;
 }
