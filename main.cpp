@@ -5,7 +5,7 @@
 * Faculty of Mathematics and Informatics of Sofia University
 * Winter semester 2022/2023
 *
-* @author Petar Petrov
+* @author Denitsa Rashkova
 * @idnumber 4MI0600173* @compiler GCC
 *
 * <main program>
@@ -91,6 +91,8 @@ void print_hash ( char* final_result ) {
             cout << final_result[col];
         }
     }
+
+    cout << endl;
 
 }
 
