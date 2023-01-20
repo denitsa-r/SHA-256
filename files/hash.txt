@@ -1,7 +1,2 @@
-Some text here with max 256 characters;
-All rows need to end with semicolon;
-Here I can type text, 123 - numbers and all symbols without the semicolon;
-testing;
-I am Denitsa Rashkova;
-I am trying to get this job done in time;
-hope for the best :) ;
+106539e23bcb45e25f90c12b352a505867607c8660e4faf5363d2afb0b338f2b;
+f41c568cf0dda53d613d2fb8b0334e85a93c0a42ceda52b8fbd9fed8df971cdd;

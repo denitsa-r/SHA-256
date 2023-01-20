@@ -1,8 +1,19 @@
+/**
+*
+* Solution to course project # 6
+* Introduction to programming course
+* Faculty of Mathematics and Informatics of Sofia University
+* Winter semester 2022/2023
+*
+* @author Petar Petrov
+* @idnumber 4MI0600173* @compiler GCC
+*
+* <main program>
+*
+*/
+
 #include <iostream>
 #include <fstream>
-
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
 
 using namespace std;
 
@@ -14,7 +25,6 @@ const int ROW_MAX = 32;
 const int ELEMENT_BITS = 8;
 const int MESSAGE_MAX = 10240;
 const int BINARY_MSG_ROWS = 16;
-const int BINARY_COLS = 4;
 const int MOD_512 = 512;
 const int LAST_BITS = 64;
 //break character for reading from file
@@ -76,7 +86,7 @@ void delete_2d_char_array ( char** array, const int &rows ) {
 //SHA-256 FUNCTIONS
 void print_hash ( char* final_result ) {
 
-    if (final_result[0] != NULL ) {
+    if (final_result[0] != '\0' ) {
         for ( int col = 0; col < COL_MAX; col++ ){
             cout << final_result[col];
         }
@@ -314,6 +324,8 @@ void from_hex_to_binary ( bool* H_binary, const char character, const int &col )
             break;
         case 'f':
             H_binary[col] = true, H_binary[col + 1] = true, H_binary[col + 2] = true, H_binary[col + 3] = true;
+            break;
+        default:
             break;
     }
 }
@@ -559,6 +571,7 @@ void making_chunks ( bool** binary, bool** hashes, const int &needed_length ) {
 }
 
 bool binary_convert ( int iteration, int index, int bit_count ){
+
     for ( int i = 0; i < bit_count; i++ ) {
 
         if( i == ( bit_count - 1 ) - iteration ){
@@ -656,7 +669,7 @@ void filling_binary ( const char* message, bool** binary, int &row, int &col, in
 
 void message_to_binary ( const char* message, bool** binary, bool** hashes, const int &length_message ) {
     int col = 0, row = 0, iteration = 1, difference = 0, message_index = 0;
-    //difference -> with it we will get the needed binary value; iteration -> keep track of out bits
+    //difference -> with it, we will get the needed binary value; iteration -> keep track of out bits
     //resetting the row value to start our work; while we have a message to read from we will transform it to binary using ascii
     while ( message_index < length_message ){
         filling_binary(message, binary, row, col, iteration, message_index, difference);
@@ -685,10 +698,10 @@ void transform_to_hex ( char* final_result, bool** hashes, int &char_index, int 
         //using ascii to transform to hex
         if ( char_index > 9 ) {
             //to get lowercase letters
-            final_result[result_index] = char_index + 87;
+            final_result[result_index] = (char)(char_index + 87);
         } else {
             //to get numbers
-            final_result[result_index] = char_index + 48;
+            final_result[result_index] = (char)(char_index + 48);
         }
     }
 }
@@ -709,6 +722,7 @@ void sha_algorithm ( const char* message, bool** binary, char* final_result, con
 }
 
 /* FILE FUNCTIONS */
+//error handling
 bool test_open () {
     fstream file;
     file.open(MAIN_FILE, ios::in);
@@ -721,36 +735,6 @@ bool test_open () {
     return true;
 }
 
-void read_file_content ( char** content, const char filename[] ) {
-    fstream file;
-    file.open(filename, ios::in);
-
-    char** line = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
-    int row = 0;
-
-    while ( true ) {
-        for( int col = 0; col < MESSAGE_MAX; col++ ){
-            file.get(line[row][col]);
-            if( line[row][col] == ';' ) {
-                break;
-            }
-            content[row][col] = line[row][col];
-            cout << content[row][col];
-            if ( file.eof() ) {
-                break;
-            }
-        }
-        if ( file.eof() ) {
-            break;
-        }
-        row++;
-    }
-
-    delete [] line;
-    delete_2d_char_array(line, MESSAGE_MAX);
-
-}
-
 void open_error () {
     //starting off I need to open my file and be able to read it
     bool success = test_open();
@@ -759,164 +743,439 @@ void open_error () {
         exit(0);
     }
 }
+//file logic
+void filling_content_rows ( fstream &file, char** line, char** content, int &row ) {
+    int content_col = 0;
+    for( int col = 0; col < MESSAGE_MAX; col++ ){
+        file.get(line[row][col]);
+        if ( line[row][col] == '\n' ) {
+            content_col = 0;
+//            col++;
+        } else if ( line[row][col] == BREAK_CHAR ) {
+            content[row][content_col] = BREAK_CHAR;
+            break;
+        } else {
+//            cout << content_col << " "<< col << endl;
+            content[row][content_col] = line[row][col];
+            content_col++;
+        }
+    }
+}
+
+char** fill_content ( fstream &file, char** line, char** content ) {
+    int row = 0;
+
+    while ( !file.eof() ) {
+        filling_content_rows(file, line, content, row);
+        row++;
+    }
+
+    content[row][0] = '\0';
+
+    return content;
+}
+
+int get_file_rows ( char** content ) {
+    int row = 0;
+    while ( true ) {
+        if ( content[row][0] == '\0' ) break;
+        row++;
+    }
+    return row;
+}
+
+void get_content ( char** line, char** content, const char filename[] ) {
+    fstream file;
+    file.open(filename, ios::in);
+    open_error();
+
+    content = fill_content(file, line, content);
+
+    file.close();
+}
+
+void printing_file_row ( char** content, const int &row, int &col ) {
+    for ( col = 0; content[row][col] != BREAK_CHAR; col++ ){
+        cout << content[row][col];
+    }
+    cout << endl;
+}
+
+void print_file_content ( char** line, char** content, const char filename[] ) {
+    get_content(line, content, filename);
+
+    int rows_file = get_file_rows(content), col = 0;
+    for ( int row = 0; row < rows_file; row++ ) {
+        printing_file_row(content, row, col);
+    }
+
+    cout << endl;
+}
+
+void print_one_line ( char** line, char** content, const char filename[], const int &asked_row ) {
+    get_content(line, content, filename);
+    int col = 0;
+    printing_file_row(content, asked_row - 1, col);
+}
 
 void append_message ( char* message, const char filename[] ) {
     fstream file;
     file.open(filename, ios::app);
+    open_error();
 
     file << message << BREAK_CHAR;
     file << "\n";
 
-    open_error();
     file.close();
 }
 
 void add_message_trunc ( char* message, const char filename[] ) {
     fstream file;
     file.open(filename, ios::out | ios::trunc );
+    open_error();
 
     file << message << BREAK_CHAR;
     file << "\n";
 
-    open_error();
     file.close();
 }
 
-void print_menu ( ) {
+void filling_found_rows ( char** content, const char* final_result, int* found_rows, int &index_found, int &row, bool &equal ) {
+    for ( int col = 0; content[row][col] != BREAK_CHAR; col++ ) {
+        if ( content[row][col] != final_result[col] ){
+            equal = false;
+            break;
+        } else {
+            equal = true;
+            found_rows[index_found] = row + 1;
+        }
+    }
+}
+
+void search_hash_into_file ( char* final_result, char** content, char** line, const char filename[] ) {
+    get_content(line, content, filename);
+    int file_rows = get_file_rows(content), index_found = 0;
+    int* found_rows = new int[ROW_MAX]();
+    bool equal = false;
+
+    for ( int row = 0; row < file_rows; row++ ) {
+        if ( equal ) {
+            index_found++;
+        }
+        filling_found_rows(content, final_result, found_rows, index_found, row, equal);
+    }
+
+    if ( found_rows[0] == 0 ) {
+        cout << "No hash found" << endl;
+    } else {
+        for ( index_found = 0; found_rows[index_found] != 0; index_found++ ){
+            cout << "The hash of your message can be found on line: " << found_rows[index_found] << " of your file." << endl;
+        }
+    }
+
+
+    cout << endl;
+}
+
+//menu additions
+void print_menu () {
+    cout << endl;
     cout << "Menu of actions: " << endl << endl;
     cout << "1. Read file contents" << endl;
     cout << "2. Read file line" << endl;
     cout << "3. Hash message" << endl;
-    cout << "4. Hash message and search it in file" << endl << endl;
+    cout << "4. Enter message, hash it and check if its hash is already in the file" << endl;
+    cout << "5. Close" << endl << endl;
 }
 
 void file_options () {
+    cout << endl;
     cout << "Choose file: " << endl;
     cout << "1. Main.txt" << endl;
     cout << "2. Hash.txt" << endl << endl;
 }
 
-void keep_file ( char &ans) {
+void keep_file () {
+    cout << endl;
     cout << "Do you want to keep the old file content?" << endl;
-    cout << "Y/N" << endl;
-    cin >> ans;
+    cout << "Y/N or y/n" << endl;
+}
+
+void keep_file_loop ( char &ans, char* final_result, const char filename[] ) {
+    bool breaker = false;
+
+    while ( cin >> ans ) {
+        if (ans == 'Y' || ans == 'y' ) {
+            append_message(final_result, filename);
+            breaker = true;
+            break;
+        } else if (ans == 'N' || ans == 'n' ) {
+            add_message_trunc(final_result, filename);
+            breaker = true;
+            break;
+        } else {
+            cerr << "Incorrect input" << endl;
+            cout << "Please enter a valid answer" << endl;
+            breaker = false;
+            break;
+        }
+
+        if ( breaker ) {
+            break;
+        }
+    }
+}
+
+void file_loop_case1 ( char** line, char** content, int &file ) {
+    bool breaker = false;
+    while (cin >> file) {
+        switch (file) {
+            case 1:
+                print_file_content(line, content, MAIN_FILE);
+                breaker = true;
+                break;
+            case 2:
+                print_file_content(line, content, HASH_FILE);
+                breaker = true;
+                break;
+            default:
+                cerr << "Incorrect input" << endl;
+                breaker = false;
+                break;
+        }
+
+        if ( breaker ) {
+            break;
+        } else {
+            cout << "Please enter a valid file number" << endl;
+        }
+    }
+}
+
+void asked_line_loop ( int &file, char** line, char** content, int &asked_line ) {
+    while (cin >> asked_line) {
+        if ( asked_line >= 1 && asked_line <= get_file_rows(content) ) {
+            print_one_line(line, content, MAIN_FILE, asked_line);
+            break;
+        } else {
+            cerr << "Incorrect input" << endl;
+            cout << "Please enter a valid row number" << endl;
+        }
+    }
+}
+
+void file_loop_case2 ( char** line, char** content,  int &file, int &asked_line ) {
+    bool breaker = false;
+
+    while (cin >> file) {
+
+        switch (file) {
+            case 1: {
+                get_content(line, content, MAIN_FILE);
+                cout << "The file has " << get_file_rows(content) << " lines. Choose line from 1 to "
+                     << get_file_rows(content) << endl;
+                asked_line_loop(file, line, content, asked_line);
+                breaker = true;
+            } break;
+            case 2: {
+                get_content(line, content, HASH_FILE);
+                cout << "The file has " << get_file_rows(content) << " lines. Choose line from 1 to "
+                     << get_file_rows(content) << endl;
+                asked_line_loop(file, line, content, asked_line);
+                breaker = true;
+            } break;
+            default:
+                cerr << "Incorrect input" << endl;
+                breaker = false;
+                break;
+        }
+
+        if( breaker ) {
+            break;
+        } else {
+            cout << "Please enter a valid file number" << endl;
+        }
+    }
+}
+
+void file_loop_case3 ( int &file, char* final_result ) {
+    bool breaker = false;
+
+    while ( cin >> file ) {
+
+        switch (file) {
+
+            case 1: {
+                char ans;
+                keep_file();
+                keep_file_loop(ans, final_result, MAIN_FILE);
+                breaker = true;
+            } break;
+
+            case 2: {
+                char ans;
+                keep_file();
+                keep_file_loop(ans, final_result, HASH_FILE);
+                breaker = true;
+            } break;
+
+            default:
+                cerr << "Incorrect input" << endl;
+                cout << "Please enter a valid answer" << endl;
+                breaker = false;
+                break;
+        }
+
+        if ( breaker ) {
+            break;
+        }
+
+    }
+}
+
+void file_loop_case4 ( int &file, char* final_result, char** content, char** line ) {
+    bool breaker = false;
+
+    while ( cin >> file ) {
+
+        switch (file) {
+            case 1: {
+                search_hash_into_file(final_result, content, line, MAIN_FILE);
+                breaker = true;
+            } break;
+            case 2: {
+                search_hash_into_file(final_result, content, line, HASH_FILE);
+                breaker = true;
+            } break;
+            default:
+                cerr << "Incorrect input" << endl;
+                breaker = false;
+                break;
+        }
+
+        if (breaker) {
+            break;
+        }
+
+    }
 }
 
 void action() {
     int input;
+    bool breaker = false;
 
-    cin >> input;
-    cin.ignore();
+    while ( cin >> input ) {
 
-    if ( input == 1 ){
-        file_options();
-        int file;
-        cin >> file;
-        char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+        cin.ignore();
 
-        switch (file) {
-            case 1:
-                read_file_content(content, MAIN_FILE);
-                break;
-            case 2:
-                read_file_content(content, HASH_FILE);
-                break;
-            default:
-                cerr << "Incorrect input" << endl;
-                break;
-        }
+        switch (input) {
+            case 1: {
+                file_options();
+                char **line = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+                char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+                int file;
 
-        delete_2d_char_array(content, MESSAGE_MAX);
-    } else if ( input == 2 ) {
-        file_options();
-        int file;
-        cin >> file;
-        char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
-        switch (file) {
-            case 1:
-                read_file_content(content, MAIN_FILE);
-                break;
-            case 2:
-                read_file_content(content, HASH_FILE);
-                break;
-            default:
-                cerr << "Incorrect input" << endl;
-                break;
-        }
-        delete_2d_char_array(content, MESSAGE_MAX);
-    } else if( input == 3 ) {
-        //array for user's message and setting default value of all zeros
-        char *message = new char[MESSAGE_MAX];
-        //making an array for the bits of the user's message
-        bool **binary = make_2d_binary(MESSAGE_MAX, COL_MAX);
+                file_loop_case1(line, content, file);
 
-        cout << "Please enter your message: " << endl;
-        cin.getline(message, MESSAGE_MAX);
-        cout << message << endl;
+                delete_2d_char_array(line, MESSAGE_MAX);
+                delete_2d_char_array(content, MESSAGE_MAX);
+            }   break;
 
-        char *final_result = new char[COL_MAX];
-        int message_length = get_message_length(message);
-        sha_algorithm(message, binary, final_result, message_length);
-        print_hash(final_result);
+            case 2: {
+                file_options();
+                char **line = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+                char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+                int file, asked_line;
 
-        cout << "Do you want to save the hash into a file?" << endl;
-        cout << "Y/N" << endl;
-        char answer;
-        cin >> answer;
+                file_loop_case2(line, content, file, asked_line);
 
-        if ( answer == 'Y' ) {
-            file_options();
-            int file;
-            cin >> file;
-            switch (file) {
-                case 1: {
-                    char ans;
-                    keep_file(ans);
-                    if (ans == 'Y') {
-                        append_message(final_result, MAIN_FILE);
-                    } else if (ans == 'N') {
-                        add_message_trunc(final_result, MAIN_FILE);
+                delete_2d_char_array(line, MESSAGE_MAX);
+                delete_2d_char_array(content, MESSAGE_MAX);
+            } break;
+
+            case 3: {
+                char *message = new char[MESSAGE_MAX];
+                bool **binary = make_2d_binary(MESSAGE_MAX, COL_MAX);
+
+                cout << "Please enter your message: " << endl;
+                cin.getline(message, MESSAGE_MAX);
+
+                char *final_result = new char[COL_MAX];
+                int message_length = get_message_length(message);
+                sha_algorithm(message, binary, final_result, message_length);
+                print_hash(final_result);
+
+                cout << "Do you want to save the hash into a file?" << endl;
+                cout << "Y/N or y/n" << endl;
+
+                char answer;
+                while ( cin >> answer ) {
+                    if ( answer == 'Y' || answer == 'y' ) {
+                        file_options();
+                        int file;
+                        file_loop_case3(file, final_result);
+                        break;
+                    } else if ( answer == 'N' || answer == 'n' ) {
+
+                        break;
+
                     } else {
                         cerr << "Incorrect input" << endl;
-                        keep_file(ans);
+                        cout << "Please enter a valid answer" << endl;
                     }
-                } break;
-                case 2: {
-                    char ans;
-                    keep_file(ans);
-                    if (ans == 'Y' || ans == 'y') {
-                        add_message_trunc(final_result, MAIN_FILE);
-                    } else if (ans == 'N' || ans == 'n' ) {
-                        add_message_trunc(final_result, MAIN_FILE);
-                    } else {
-                        cerr << "Incorrect input" << endl;
-                        keep_file(ans);
-                    }
-                } break;
-                default:
-                    cerr << "Incorrect input" << endl;
-                    break;
+                }
+
+
+                delete[] message;
+                delete[] final_result;
+                delete_2d_bool_array(binary, MESSAGE_MAX);
+            }   break;
+
+            case 4: {
+                char *message = new char[MESSAGE_MAX];
+                bool **binary = make_2d_binary(MESSAGE_MAX, COL_MAX);
+
+                cout << "Please enter your message: " << endl;
+                cin.getline(message, MESSAGE_MAX);
+
+                char *final_result = new char[COL_MAX];
+                int message_length = get_message_length(message);
+                sha_algorithm(message, binary, final_result, message_length);
+
+                delete[] message;
+                delete_2d_bool_array(binary, MESSAGE_MAX);
+
+                cout << "Select a file to search for the message: " << endl;
+                char **line = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+                char **content = make_2d_chars(MESSAGE_MAX, MESSAGE_MAX);
+
+                file_options();
+                int file;
+
+                file_loop_case4(file, final_result, content, line);
+
+                delete_2d_char_array(line, MESSAGE_MAX);
+                delete_2d_char_array(content, MESSAGE_MAX);
+                delete[] final_result;
+            } break;
+
+            case 5: {
+                cout << endl << "Thank you for using the SHA-256 application!" << endl;
+                exit(1);
+            }   break;
+
+            default: {
+                cerr << "Incorrect input" << endl;
             }
 
         }
 
-        delete[] message;
-        delete[] final_result;
-        delete_2d_bool_array(binary, MESSAGE_MAX);
-    } else if ( input == 4 ) {
-        //
-    } else {
-        cerr << "Incorrect input" << endl;
         print_menu();
-        action();
     }
 
 }
 
 int main() {
-    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-
-
     cout << "Welcome to the SHA-256 application!" << endl;
     
     print_menu();
