@@ -402,7 +402,7 @@ bool* choose ( bool* choose, bool* e, bool* f, bool* g ) {
 
     xor_sigma_row(choice[0], choice[1], choose);
 
-    delete [] choice;
+    delete_2d_bool_array(choice, 2);
     delete [] not_e;
 
     return choose;
@@ -453,6 +453,7 @@ bool* find_temp1 ( bool* temp, bool* h, bool* S1, bool* ch, bool** chunk, const 
     // h + s1 + ch + ki + wi
     addition_modulo_2(result[1], chunk[i], temp, reminder);
 
+    delete_2d_bool_array(result, 3);
     return temp;
 }
 
